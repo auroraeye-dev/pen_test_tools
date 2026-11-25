@@ -1,0 +1,17 @@
+# Optional: run MockSQL at boot with systemd.
+#   1. Edit the two paths below to where you cloned pentest-lab.
+#   2. sudo cp extras/mocksql.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload && sudo systemctl enable --now mocksql
+#   Logs: journalctl -u mocksql -f
+[Unit]
+Description=MockSQL home CTF lab service (intentionally insecure)
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/YOUR_USER/pentest-lab
+ExecStart=/usr/bin/python3 /home/YOUR_USER/pentest-lab/mocksql/server.py
+Restart=on-failure
+User=YOUR_USER
+
+[Install]
+WantedBy=multi-user.target

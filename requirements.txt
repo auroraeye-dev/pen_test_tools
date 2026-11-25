@@ -1,0 +1,2 @@
+# Nothing to install: MockSQL uses only the Python 3.8+ standard library.
+# On the Mac you also want:  brew install nmap  and  brew install --cask wireshark
