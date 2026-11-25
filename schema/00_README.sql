@@ -1,0 +1,4 @@
+-- Every *.sql file in this folder is loaded in name order when MockDBX starts.
+-- Supported: CREATE DATABASE / CREATE SCHEMA, USE, CREATE TABLE. Everything
+-- else (INSERT, CREATE INDEX, views, ...) is ignored, so a `mysqldump --no-data`
+-- or `pg_dump --schema-only` file can be dropped in as is. Rows are never served.

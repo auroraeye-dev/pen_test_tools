@@ -1,0 +1,17 @@
+# Optional: run MockDBX at boot with systemd.
+#   1. Edit the two paths below to where you cloned pen_test_tools.
+#   2. sudo cp extras/mockdbx.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload && sudo systemctl enable --now mockdbx
+#   Logs: journalctl -u mockdbx -f
+[Unit]
+Description=MockDBX home CTF lab service (intentionally insecure)
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/YOUR_USER/pen_test_tools
+ExecStart=/usr/bin/python3 /home/YOUR_USER/pen_test_tools/mockdbx/server.py
+Restart=on-failure
+User=YOUR_USER
+
+[Install]
+WantedBy=multi-user.target

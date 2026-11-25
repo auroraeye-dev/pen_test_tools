@@ -1,5 +1,5 @@
 """
-Tiny SQL DDL reader for MockSQL: turns CREATE DATABASE / USE / CREATE TABLE
+Tiny SQL DDL reader for MockDBX: turns CREATE DATABASE / USE / CREATE TABLE
 statements into {database: {table: [column definitions]}}. Structure only.
 Anything else (INSERT, CREATE INDEX, views, procedures...) is skipped, so a
 real-world schema dump can be dropped in without editing.

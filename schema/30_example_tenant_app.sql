@@ -1,7 +1,5 @@
--- MockSQL default structure. STRUCTURE ONLY: MockSQL never stores rows.
--- Every *.sql file in this folder is loaded in name order at startup.
--- Supported: CREATE DATABASE, USE, CREATE TABLE (others are ignored).
--- Drop your own schema files (e.g. from dbx) in here as 20_mine.sql etc.
+-- Example structure of the apps that use the "acme" tenant (an online shop
+-- with users and HR). STRUCTURE ONLY: MockDBX never stores rows.
 
 CREATE DATABASE IF NOT EXISTS app_db;
 USE app_db;
@@ -111,14 +109,4 @@ CREATE TABLE employees (
   title         VARCHAR(64),
   hired_on      DATE,
   manager_id    BIGINT NULL REFERENCES employees(id)
-);
-
-CREATE DATABASE IF NOT EXISTS vault_db;
-USE vault_db;
-
--- Hint for players: the real "vault" is the secret folder. Try SHOW SECRET after LOGIN.
-CREATE TABLE secret_files (
-  name       VARCHAR(64) PRIMARY KEY,
-  size_bytes INT,
-  added_at   DATETIME
 );
