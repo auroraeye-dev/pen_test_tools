@@ -24,24 +24,18 @@ import hmac
 import os
 import socketserver
 import sys
-import threading
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from schema import load_schema  # noqa: E402
 
 VERSION = "0.9.1-lab"
 LAB_DIR = Path(__file__).resolve().parent.parent
 
-# A fake schema, so the service "looks" like a database. No rows anywhere.
-FAKE_SCHEMA = {
-    "app_db": {
-        "users": ["id INT PRIMARY KEY", "username VARCHAR(32)", "created_at DATETIME"],
-        "sessions": ["id INT PRIMARY KEY", "user_id INT", "expires_at DATETIME"],
-        "audit_log": ["id INT PRIMARY KEY", "event VARCHAR(64)", "ts DATETIME"],
-    },
-    "vault_db": {
-        "secret_files": ["name VARCHAR(64)", "size_bytes INT"],
-    },
-}
+# The database structure is loaded from schema/*.sql at startup (structure
+# only, see mocksql/schema.py). Filled in by main().
+FAKE_SCHEMA: dict = {}
 
 HELP_TEXT = """Commands (one per line, case-insensitive):
   HELP                          this text
@@ -51,6 +45,7 @@ HELP_TEXT = """Commands (one per line, case-insensitive):
   USE <database>                pick a database
   SHOW TABLES                   list tables in current database (fake)
   DESCRIBE <table>              show columns (fake)
+  SHOW CREATE TABLE <table>     show the table's DDL
   SELECT ...                    always returns an empty set (no real data)
   SHOW SECRET                   list files in the secret folder   [login required]
   FETCH <file>                  download a secret file as base64  [login required]
@@ -151,6 +146,17 @@ class MockSQLHandler(socketserver.StreamRequestHandler):
                     for t in FAKE_SCHEMA[s.db]:
                         self.send(f"| {t} |")
                     self.send(f"OK {len(FAKE_SCHEMA[s.db])} rows")
+                elif " ".join(p.upper() for p in parts[:3]) == "SHOW CREATE TABLE":
+                    table = parts[3] if len(parts) > 3 else ""
+                    cols = FAKE_SCHEMA.get(s.db or "", {}).get(table)
+                    if not cols:
+                        self.send("ERR unknown table (did you USE a database?)")
+                        continue
+                    self.send(f"CREATE TABLE {table} (")
+                    for i, c in enumerate(cols):
+                        self.send(f"  {c}{',' if i < len(cols) - 1 else ''}")
+                    self.send(");")
+                    self.send("OK")
                 elif cmd in ("DESCRIBE", "DESC"):
                     table = parts[1] if len(parts) > 1 else ""
                     cols = FAKE_SCHEMA.get(s.db or "", {}).get(table)
@@ -210,6 +216,7 @@ def main():
     ap = argparse.ArgumentParser(description="MockSQL lab server (intentionally insecure)")
     ap.add_argument("--host", default=env.get("MOCKSQL_HOST", "0.0.0.0"))
     ap.add_argument("--port", type=int, default=int(env.get("MOCKSQL_PORT", "13306")))
+    ap.add_argument("--schema-dir", default=env.get("MOCKSQL_SCHEMA_DIR", str(LAB_DIR / "schema")))
     ap.add_argument("--secret-dir", default=env.get("MOCKSQL_SECRET_DIR", str(LAB_DIR / "secret")))
     args = ap.parse_args()
 
@@ -218,9 +225,12 @@ def main():
     if not user or not password:
         sys.exit("No user/password configured. Run ./setup.sh first (it writes config.env).")
 
+    FAKE_SCHEMA.update(load_schema(args.schema_dir))
+    n_tables = sum(len(t) for t in FAKE_SCHEMA.values())
     MockSQLHandler.config = {"user": user, "password": password, "secret_dir": args.secret_dir}
     with ThreadedServer((args.host, args.port), MockSQLHandler) as srv:
         log(f"MockSQL {VERSION} listening on {args.host}:{args.port}")
+        log(f"schema: {len(FAKE_SCHEMA)} databases, {n_tables} tables from {args.schema_dir}")
         log(f"secret folder: {args.secret_dir}")
         log("WARNING: lab service, cleartext protocol. Run it only on your own LAN.")
         try:

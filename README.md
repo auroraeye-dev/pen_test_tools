@@ -1,4 +1,4 @@
-# pentest-lab: find the port, sniff the password, win the picture
+# pen_test_tools: find the port, sniff the password, win the picture
 
 A small home CTF lab. You run a fake "SQL-like" database service on your own
 UTM virtual machine. From your Mac you discover it with **nmap**, capture a
@@ -23,7 +23,9 @@ it to unlock the **secret folder** that holds your winning picture and a flag.
 
 | Path | What it is |
 | --- | --- |
-| `mocksql/server.py` | The mock database service. Pure Python stdlib, any CPU (ARM64 under UTM is fine). Holds no real data, just a fake schema. |
+| `mocksql/server.py` | The mock database service. Pure Python stdlib, any CPU (ARM64 under UTM is fine). Holds no real data, only structure. |
+| `schema/*.sql` | The database structure the service shows (4 databases, 14 tables by default). Plain `CREATE DATABASE` / `CREATE TABLE` files: swap in your own. |
+| `mocksql/schema.py` | Reads those `.sql` files. Ignores `INSERT`s and anything else, so a real schema dump drops straight in. |
 | `mocksql/client.py` | Client with three modes: `shell` (interactive), `admin` (pretends to be you logging in every few seconds, so there's traffic to sniff), `fetch` (logs in and downloads the secret folder). |
 | `secret/` | The secret folder. `winning_picture.png` is a placeholder, swap in your own. `setup.sh` adds `flag.txt`. |
 | `setup.sh` | Run once on the VM: pick a username and password, generate the flag, open the firewall port. |
@@ -54,13 +56,13 @@ On the VM:
 
 ```bash
 sudo apt update && sudo apt install -y git python3
-git clone https://github.com/auroraeye-dev/pentest-lab.git
-cd pentest-lab
+git clone https://github.com/auroraeye-dev/pen_test_tools.git
+cd pen_test_tools
 ./setup.sh          # choose username + password (no spaces)
 ./run.sh            # prints the VM IP, then listens on 0.0.0.0:13306
 ```
 
-(Private repo? Clone with `gh repo clone auroraeye-dev/pentest-lab` after
+(Private repo? Clone with `gh repo clone auroraeye-dev/pen_test_tools` after
 `gh auth login`, or use a personal access token.)
 
 Optional: put your own photo in place of `secret/winning_picture.png` (any
@@ -69,6 +71,25 @@ file you drop in `secret/` is served). Want a different port? Run
 
 Find the VM's IP any time with `hostname -I` or `ip -4 addr`. Write it down,
 but in Part 2 pretend you don't know it.
+
+### Use your own database structure
+
+Every `*.sql` file in `schema/` is loaded in name order when the service
+starts. Put your own structure in, for example `schema/20_mine.sql`, or delete
+`10_default.sql` to show only yours. A `mysqldump --no-data` or `pg_dump
+--schema-only` output works as is. Only the structure is used: rows from
+`INSERT` statements are ignored and never served. Restart `./run.sh` after
+changes; the first log lines say how many databases and tables were loaded.
+
+Once you're in (any time, no login needed):
+
+```
+SHOW DATABASES
+USE shop_db
+SHOW TABLES
+DESCRIBE orders
+SHOW CREATE TABLE orders
+```
 
 ## Part 2: discover the VM with nmap (on the Mac)
 
